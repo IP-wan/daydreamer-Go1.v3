@@ -1,0 +1,15 @@
+tensorflow==2.15
+tensorflow-probability==0.22.0
+attr
+attrs
+cloudpickle
+dm-sonnet
+filterpy
+gym==0.22.0
+pybullet
+pygame
+rich
+ruamel.yaml
+zmq
+crcmod==1.7
+numpy==1.23.5

@@ -205,25 +205,25 @@ class Go1Robot(go1.Go1):
     so changing it to noop instead.
     """
     state = self._robot_interface.receive_observation()
+    self._raw_state = state
     for paket in state:
-        lstate = self._robot_interface.lstate.parseData(state)
-        self._raw_state = state
+        self._robot_interface.lstate.parseData(paket)
     # Convert quaternion from wxyz to xyzw, which is default for Pybullet.
-        q = lstate.imu.quaternion
+        q = self._robot_interface.lstate.imu.quaternion
         self._base_orientation = np.array([q[1], q[2], q[3], q[0]])
-        self._accelerometer_reading = np.array(lstate.imu.accelerometer)
-        self._motor_angles = np.array([motor.q for motor in lstate.motorState[:12]])
+        self._accelerometer_reading = np.array(self._robot_interface.lstate.imu.accelerometer)
+        self._motor_angles = np.array([motor.q for motor in self._robot_interface.lstate.motorState[:12]])
         self._motor_velocities = np.array(
-            [motor.dq for motor in lstate.motorState[:12]])
+            [motor.dq for motor in self._robot_interface.lstate.motorState[:12]])
         self._joint_states = np.array(
             list(zip(self._motor_angles, self._motor_velocities)))
         self._observed_motor_torques = np.array(
-            [motor.tauEst for motor in lstate.motorState[:12]])
+            [motor.tauEst for motor in self._robot_interface.lstate.motorState[:12]])
         self._motor_temperatures = np.array(
-            [motor.temperature for motor in lstate.motorState[:12]])
+            [motor.temperature for motor in self._robot_interface.lstate.motorState[:12]])
         if self._init_complete:
           # self._SetRobotStateInSim(self._motor_angles, self._motor_velocities)
-          self._velocity_estimator.update(lstate.tick / 1000.)
+          self._velocity_estimator.update(int.from_bytes(self._robot_interface.lstate.tick, byteorder='little') / 1000.)
           self._UpdatePosition()
 
   def _CheckMotorTemperatures(self):
@@ -270,13 +270,17 @@ class Go1Robot(go1.Go1):
     return self.GetTrueBaseRollPitchYawRate()
 
   def GetTrueBaseRollPitchYawRate(self):
-    return np.array(self._raw_state.imu.gyroscope).copy()
+    for paket in self._raw_state:
+        self._robot_interface.lstate.parseData(paket)
+    return np.array(self._robot_interface.lstate.imu.gyroscope).copy()
 
   def GetBaseVelocity(self):
     return self._velocity_estimator.estimated_velocity.copy()
 
   def GetFootContacts(self):
-    return np.array(self._raw_state.footForce) > 20
+    for paket in self._raw_state:
+        self._robot_interface.lstate.parseData(paket)
+    return np.array(self._robot_interface.lstate.footForce) > 20
 
   def GetTimeSinceReset(self):
     return time.time() - self._last_reset_time

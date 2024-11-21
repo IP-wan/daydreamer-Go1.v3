@@ -52,7 +52,7 @@ class motorState:                               # motor feedback
         self.q_raw = q_raw                      # current angle (unit: radian)
         self.dq_raw = dq_raw                    # current velocity (unit: radian/second)
         self.ddq_raw = ddq_raw
-        self.temperature = temperature          # current temperature (temperature conduction is slow that leads to lag)
+        self.t = temperature          # current temperature (temperature conduction is slow that leads to lag)
         self.reserve = reserve
 
 class imu:                                      # when under accelerated motion, the attitude of the robot calculated by IMU will drift.

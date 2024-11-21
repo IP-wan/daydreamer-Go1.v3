@@ -72,11 +72,10 @@ def main(argv=None):
 
     cleanup = []
     try:
+        # Задаем начальное значение (не меняется от перезапуска)
         config = config.update({'env.seed': hash((config.seed, parsed.worker))})
-
         env = embodied.envs.load_env(
             config.task, mode='train', logdir=logdir, **config.env)
-        print(env)
         agent = agnt.Agent(env.obs_space, env.act_space, step, config)
         cleanup.append(env)
 
@@ -137,6 +136,7 @@ def make_replay(
         store = embodied.replay.StoreClient(remote_addr)
     else:
         if directory:
+            # Выполняется
             store = embodied.replay.CkptRAMStore(
                 directory, size, parallel=True)
         else:

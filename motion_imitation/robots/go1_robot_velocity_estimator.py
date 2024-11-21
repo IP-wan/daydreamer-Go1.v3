@@ -29,23 +29,44 @@ class VelocityEstimator:
 
     Args:
       robot: the robot class for velocity estimation.
-      accelerometer_variance: noise estimation for accelerometer reading.
-      sensor_variance: noise estimation for motor velocity reading.
-      initial_covariance: covariance estimation of initial state.
+      accelerometer_variance: оценка шума при считывании показаний акселерометра.
+      sensor_variance: оценка шума для измерения скорости двигателя.
+      initial_covariance: ковариационная оценка начального состояния.
     """
     self.robot = robot
-
+    # dim_x=3 - Размер вектора состояния; dim_z=3 - Размер вектора измерений; dim_u=3 -
     self.filter = KalmanFilter(dim_x=3, dim_z=3, dim_u=3)
+    # Начальное состояние.
     self.filter.x = np.zeros(3)
+    # Задаем дисперсию
     self._initial_variance = initial_variance
+    # np.eye(k=0) - возвращает матрицу, т. е. двумерный массив, имеющего 1 по диагонали и 0 в других местах
+    # относительно определенной позиции, т. е. k-го значения.
+    # Ковариационная матрица — это многомерный аналог дисперсии, для случая, когда у нас не одна случайная величина,
+    # а случайный вектор.
+    # Ковариация показывает, насколько переменные зависят друг от друга.
+
+    # Ковариационная матрица для начального состояния
     self.filter.P = np.eye(3) * self._initial_variance  # State covariance
+    # Ковариационная матрица ошибки модели.
     self.filter.Q = np.eye(3) * accelerometer_variance
+    # Ковариационная матрица шума измерений. Маленькое значение означает точность оценки.
     self.filter.R = np.eye(3) * sensor_variance
 
+    # Матрица наблюдений. Функция измерения.
     self.filter.H = np.eye(3)  # measurement function (y=H*x)
+    # Матрица перехода между состояниями 
     self.filter.F = np.eye(3)  # state transition matrix
+    # Матрица управления, которая прикладывается к вектору управляющих воздействий
     self.filter.B = np.eye(3)
 
+    # Скользящее среднее представляет собой среднее арифметическое значение наблюдений в определенном окне или периоде,
+    # который "скользит" вдоль временного ряда. Скользящее среднее помогает сгладить краткосрочные колебания и шумы,
+    # выявлять тренды и улавливать долгосрочные закономерности в данных.
+    # Чтобы вычислить скользящее среднее, нужно определить размер окна (количество наблюдений, включенных в среднее) и,
+    # начиная с первого значения во временном ряду, взять среднее арифметическое значение наблюдений в этом окне. Затем
+    # окно сдвигается на одно наблюдение вперед, и процесс повторяется до тех пор, пока окно не достигнет конца
+    # временного ряда.
     self._window_size = moving_window_filter_size
     self.moving_window_filter_x = MovingWindowFilter(
        window_size=self._window_size)
@@ -54,9 +75,11 @@ class VelocityEstimator:
     self.moving_window_filter_z = MovingWindowFilter(
        window_size=self._window_size)
     self._estimated_velocity = np.zeros(3)
+    # Устанавливаем последнюю временную метку
     self._last_timestamp = 0
 
   def reset(self):
+    # Сбрасываем в состоянии инициализации
     self.filter.x = np.zeros(3)
     self.filter.P = np.eye(3) * self._initial_variance
     self.moving_window_filter_x = MovingWindowFilter(

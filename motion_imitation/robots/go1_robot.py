@@ -52,8 +52,8 @@ MOTOR_NAMES = [
     "RL_upper_joint",
     "RL_lower_joint",
 ]
-# INIT_RACK_POSITION = [0, 0, 1]
-# INIT_POSITION = [0, 0, 0.48]
+INIT_RACK_POSITION = [0, 0, 1]
+INIT_POSITION = [0, 0, 0.48]
 JOINT_DIRECTIONS = np.ones(12)
 HIP_JOINT_OFFSET = 0.0
 UPPER_LEG_JOINT_OFFSET = 0.0
@@ -99,7 +99,7 @@ LOWER_NAME_PATTERN = re.compile(r"\w+_lower_\w+")
 TOE_NAME_PATTERN = re.compile(r"\w+_toe\d*")
 IMU_NAME_PATTERN = re.compile(r"imu\d*")
 
-# URDF_FILENAME = "go1/go1.urdf"
+URDF_FILENAME = "go1/go1.urdf"
 
 _BODY_B_FIELD_NUMBER = 2
 _LINK_A_FIELD_NUMBER = 3
@@ -223,7 +223,7 @@ class Go1Robot(go1.Go1):
             [motor.temperature for motor in self._robot_interface.lstate.motorState[:12]])
         if self._init_complete:
           # self._SetRobotStateInSim(self._motor_angles, self._motor_velocities)
-          self._velocity_estimator.update(int.from_bytes(self._robot_interface.lstate.tick, byteorder='little') / 1000.)
+          self._velocity_estimator.update(int.from_bytes(self._robot_interface.lstate.tick, byteorder='big') / 1000.)
           self._UpdatePosition()
 
   def _CheckMotorTemperatures(self):
@@ -248,8 +248,12 @@ class Go1Robot(go1.Go1):
   def GetTrueMotorAngles(self):
     # TODO
     # return self._motor_angles.copy()
+    motor_angles = None
     state = self._robot_interface.receive_observation()
-    return np.array([motor.q for motor in state.motorState[:12]])
+    for paket in state:
+        self._robot_interface.lstate.parseData(paket)
+        motor_angles = np.array([motor.q for motor in self._robot_interface.lstate.motorState[:12]])
+    return motor_angles
 
   def GetMotorAngles(self):
     return minitaur.MapToMinusPiToPi(self._motor_angles).copy()
@@ -278,9 +282,7 @@ class Go1Robot(go1.Go1):
     return self._velocity_estimator.estimated_velocity.copy()
 
   def GetFootContacts(self):
-    for paket in self._raw_state:
-        self._robot_interface.lstate.parseData(paket)
-    return np.array(self._robot_interface.lstate.footForce) > 20
+    return np.array(self._raw_state.footForce) > 20
 
   def GetTimeSinceReset(self):
     return time.time() - self._last_reset_time

@@ -29,3 +29,6 @@ class RobotInterface:
         self.conn.send(self.cmd_bytes)
         state = self.conn.getData()
         return state
+
+    def brake(self):
+        pass

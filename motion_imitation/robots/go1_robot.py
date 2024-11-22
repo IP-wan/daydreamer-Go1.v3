@@ -220,7 +220,7 @@ class Go1Robot(go1.Go1):
         self._observed_motor_torques = np.array(
             [motor.tauEst for motor in self._robot_interface.lstate.motorState[:12]])
         self._motor_temperatures = np.array(
-            [motor.temperature for motor in self._robot_interface.lstate.motorState[:12]])
+            [motor.t for motor in self._robot_interface.lstate.motorState[:12]])
         if self._init_complete:
           # self._SetRobotStateInSim(self._motor_angles, self._motor_velocities)
           self._velocity_estimator.update(int.from_bytes(self._robot_interface.lstate.tick, byteorder='big') / 1000.)
@@ -248,12 +248,10 @@ class Go1Robot(go1.Go1):
   def GetTrueMotorAngles(self):
     # TODO
     # return self._motor_angles.copy()
-    motor_angles = None
     state = self._robot_interface.receive_observation()
     for paket in state:
         self._robot_interface.lstate.parseData(paket)
-        motor_angles = np.array([motor.q for motor in self._robot_interface.lstate.motorState[:12]])
-    return motor_angles
+    return np.array([motor.q for motor in self._robot_interface.lstate.motorState[:12]])
 
   def GetMotorAngles(self):
     return minitaur.MapToMinusPiToPi(self._motor_angles).copy()
@@ -282,7 +280,9 @@ class Go1Robot(go1.Go1):
     return self._velocity_estimator.estimated_velocity.copy()
 
   def GetFootContacts(self):
-    return np.array(self._raw_state.footForce) > 20
+    for paket in self._raw_state:
+        self._robot_interface.lstate.parseData(paket)
+    return np.array(self._robot_interface.lstate.footForce) > 20
 
   def GetTimeSinceReset(self):
     return time.time() - self._last_reset_time
